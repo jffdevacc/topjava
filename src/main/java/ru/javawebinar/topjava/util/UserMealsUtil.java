@@ -3,11 +3,13 @@ package ru.javawebinar.topjava.util;
 import ru.javawebinar.topjava.model.UserMeal;
 import ru.javawebinar.topjava.model.UserMealWithExceed;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Month;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -29,12 +31,27 @@ public class UserMealsUtil {
 //        .toLocalTime();
     }
 
-    public static List<UserMealWithExceed>  getFilteredWithExceeded(List<UserMeal> mealList, LocalTime startTime, LocalTime endTime, int caloriesPerDay) {
+    public static List<UserMealWithExceed> getFilteredWithExceeded(List<UserMeal> mealList, LocalTime startTime, LocalTime endTime, int caloriesPerDay) {
         // TODO return filtered list with correctly exceeded field
-        return mealList.stream().map(meal-> {
-                    LocalTime mealTime = meal.getDateTime().toLocalTime();
-                    boolean exceed = !(mealTime.isAfter(startTime) && mealTime.isBefore(endTime));
-                    return new UserMealWithExceed(meal.getDateTime(), meal.getDescription(), meal.getCalories(), exceed);
+        List<UserMealWithExceed> result;
+        Map<LocalDate, Integer> coutCaloriesPerDay = mealList.stream().collect(
+                Collectors.groupingBy(
+                        meal->meal.getDateTime().toLocalDate(),
+                        Collectors.summingInt(UserMeal::getCalories)
+                )
+        );
+
+        result = mealList.stream().filter(meal->{
+            LocalTime mealTime = meal.getDateTime().toLocalTime();
+            return mealTime.compareTo(startTime)>=0 && mealTime.compareTo(endTime)<=0;
+        }).map(meal-> {
+            LocalDate mealDate = meal.getDateTime().toLocalDate();
+            boolean exceed = coutCaloriesPerDay.get(mealDate) > caloriesPerDay;
+            return new UserMealWithExceed(meal.getDateTime(), meal.getDescription(), meal.getCalories(), exceed);
         }).collect(Collectors.toList());
+
+        result.stream().forEach(System.out::println);
+
+        return result;
     }
 }
